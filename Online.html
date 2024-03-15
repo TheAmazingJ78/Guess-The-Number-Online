@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guess the Number - Multiplayer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: lightblue;
+      background-image: url('grass.jpg'); /* Replace 'grass.jpg' with your grassy green ground image */
+      background-size: cover;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+    #container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    #ground {
+      background-color: rgba(92, 184, 92, 0.5); /* Transparent green background */
+      height: 200px;
+      width: 100%;
+      position: fixed;
+      bottom: 0;
+      z-index: 1; /* Ensure the ground is below other elements */
+    }
+    #player {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 20px;
+      background-color: #8B4513; /* Light brown */
+      border-radius: 50%;
+      z-index: 2; /* Ensure player is on top */
+    }
+    #playerName {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 14px;
+      color: #333;
+      z-index: 3; /* Ensure player name is on top */
+    }
+    input[type="text"], button, p {
+      margin: 5px;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      position: relative;
+      z-index: 3; /* Ensure other elements are on top of player */
+    }
+    button {
+      cursor: pointer;
+    }
+    #guessButton {
+      background-color: #5bc0de; /* Cyan */
+      color: white;
+    }
+    #hintButton {
+      background-color: #5cb85c; /* Green */
+      color: white;
+    }
+    #buyHintButton {
+      background-color: #d9534f; /* Red */
+      color: white;
+    }
+    #creditsContainer {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      color: black; /* Text color changed to black */
+      z-index: 4; /* Ensure credits container is on top */
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h1>Guess the Number - Multiplayer</h1>
+    <p id="guessText">Guess a number between 1 and 3:</p>
+    <input type="text" id="guessField">
+    <button id="guessButton" onclick="checkGuess()">Submit Guess</button>
+    <button id="hintButton" onclick="provideHint()">Get Hint (1 time only)</button>
+    <button id="buyHintButton" onclick="buyHint()">Buy Hint (10 Guesses)</button>
+    <input type="text" id="changeNameField" placeholder="Enter your name">
+    <button id="changeNameButton" onclick="confirmNameChange()">Change Name</button>
+    <p id="hintText"></p>
+    <h2>Other Player's Guesses</h2>
+    <ul id="otherGuesses"></ul>
+
+    <div id="player">
+      <div id="playerName">Player</div>
+    </div>
+  </div>
+
+  <div id="ground"></div>
+
+  <div id="creditsContainer">
+    <div id="credits">Guesses: 0</div>
+    <div>
+      Co-Owner: TheRythmMaster<br>
+      Scripter/Developer: Therckr7466<br>
+      Admin: Kyman
+    </div>
+  </div>
+
+  <script>
+    let randomNumber;
+    let guesses = 0;
+    let hintUsed = false;
+    let credits = 0;
+    const otherGuesses = [];
+    let currentUser = "Player";
+    let playerPosition = 50; // Initial position of the player
+
+    function startGame() {
+      // Generate random number between 1 and 3 for level 1
+      randomNumber = Math.floor(Math.random() * 3) + 1;
+    }
+
+    function checkGuess() {
+      const userGuess = parseInt(document.getElementById('guessField').value);
+      const hintText = document.getElementById('hintText');
+
+      if (isNaN(userGuess) || userGuess < 1 || userGuess > 3) {
+        hintText.textContent = 'Please enter a valid number between 1 and 3.';
+        return;
+      }
+
+      guesses++;
+
+      if (userGuess === randomNumber) {
+        const earnedGuesses = Math.floor(Math.random() * 3) + 1; // Earn random amount of guesses
+        credits += earnedGuesses;
+        updateCreditsDisplay();
+        hintText.textContent = `Congratulations ${currentUser}! You guessed the number ${randomNumber} in ${guesses} guesses and earned ${earnedGuesses} Guesses.`;
+        disableInput();
+        setTimeout(startNextGame, 3000); // Start the next game after 3 seconds
+      } else {
+        hintText.textContent = 'Incorrect guess! Try again.';
+      }
+
+      otherGuesses.push({ player: currentUser, guess: userGuess });
+      displayOtherGuesses();
+      document.getElementById('guessField').value = '';
+    }
+
+    function provideHint() {
+      if (!hintUsed) {
+        const hintText = document.getElementById('hintText');
+        if (randomNumber === 1) {
+          hintText.textContent = 'The number is less than 2.';
+        } else if (randomNumber === 2) {
+          hintText.textContent = 'The number is greater than 1 and less than 3.';
+        } else {
+          hintText.textContent = 'The number is greater than 2.';
+        }
+        hintUsed = true;
+      }
+    }
+
+    function buyHint() {
+      if (credits >= 10) {
+        credits -= 10;
+        updateCreditsDisplay();
+        hintUsed = true;
+        provideHint();
+      } else {
+        alert("Not enough Guesses to buy a hint.");
+      }
+    }
+
+    function displayOtherGuesses() {
+      const otherGuessesList = document.getElementById('otherGuesses');
+      otherGuessesList.innerHTML = '';
+
+      otherGuesses.forEach(guess => {
+        const li = document.createElement('li');
+        li.textContent = `${guess.player}: ${guess.guess}`;
+        otherGuessesList.appendChild(li);
+      });
+    }
+
+    function disableInput() {
+      document.getElementById('guessField').disabled = true;
+      document.querySelectorAll('button').forEach(button => {
+        button.disabled = true;
+      });
+    }
+
+    function changeName() {
+      const newName = document.getElementById('changeNameField').value;
+      if (newName.trim() !== "") {
+        currentUser = newName;
+        document.getElementById('playerName').textContent = newName;
+      }
+    }
+
+    function startNextGame() {
+      // Reset game variables and start a new game
+      guesses = 0;
+      hintUsed = false;
+      otherGuesses.length = 0;
+      document.getElementById('guessField').disabled = false;
+      document.querySelectorAll('button').forEach(button => {
+        button.disabled = false;
+      });
+      startGame();
+      document.getElementById('guessText').textContent = `Guess a number between 1 and 3:`;
+      document.getElementById('hintText').textContent = '';
+    }
+
+    function confirmNameChange() {
+      if (confirm("Are you sure you want to change your name?")) {
+        changeName();
+      }
+    }
+
+    function updateCreditsDisplay() {
+      document.getElementById('credits').textContent = `Guesses: ${credits}`;
+    }
+
+    document.addEventListener('keydown', function(event) {
+      switch(event.key) {
+        case 'w':
+        case 'ArrowUp':
+          movePlayer(10, 'vertical'); // Move up
+          break;
+        case 's':
+        case 'ArrowDown':
+          movePlayer(-10, 'vertical'); // Move down
+          break;
+        case 'a':
+        case 'ArrowLeft':
+          movePlayer(-10, 'horizontal'); // Move left
+          break;
+        case 'd':
+        case 'ArrowRight':
+          movePlayer(10, 'horizontal'); // Move right
+          break;
+      }
+    });
+
+    function movePlayer(distance, direction = 'vertical') {
+      if (direction === 'vertical') {
+        const newBottom = parseInt(window.getComputedStyle(document.getElementById('player')).bottom) + distance;
+        if (newBottom >= 10 && newBottom <= window.innerHeight - 30) { // Limit movement within the screen height
+          document.getElementById('player').style.bottom = newBottom + 'px';
+        }
+      } else {
+        const newLeft = parseInt(window.getComputedStyle(document.getElementById('player')).left) + distance;
+        if (newLeft >= 10 && newLeft <= window.innerWidth - 30) { // Limit movement within the screen width
+          document.getElementById('player').style.left = newLeft + 'px';
+        }
+      }
+    }
+
+    // Start the game when the page loads
+    window.onload = function() {
+      startGame();
+      updateCreditsDisplay();
+    };
+  </script>
+</body>
+</html>
